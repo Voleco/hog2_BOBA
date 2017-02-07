@@ -72,7 +72,7 @@ namespace TOHTEST {
 }
 
 namespace PANCAKETEST {
-	const int LENGTH = 100;
+	const int LENGTH = 30;
 	enum instanceType
 	{
 		s5,
@@ -539,7 +539,7 @@ void PANCAKETEST::pancakeTest(instanceType type)
 
 	std::vector<PancakePuzzleState<N>> thePath;
 
-	std::cout << "Pancake puzzle: ";
+	std::cout << "Pancake puzzle type: ";
 	switch (type)
 	{
 	case s5:
@@ -553,6 +553,8 @@ void PANCAKETEST::pancakeTest(instanceType type)
 	}
 	std::cout << " puzzle size: " << N <<"\n";
 
+	std::cout << " start: " << start << "\n";
+	std::cout << " goal: " << goal << "\n";
 
 	Timer timer;
 
