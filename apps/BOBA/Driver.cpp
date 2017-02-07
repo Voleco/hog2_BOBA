@@ -72,7 +72,7 @@ namespace TOHTEST {
 }
 
 namespace PANCAKETEST {
-	const int LENGTH = 30;
+	const int LENGTH = 20;
 	enum instanceType
 	{
 		s5,

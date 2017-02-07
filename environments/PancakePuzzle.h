@@ -57,6 +57,7 @@ public:
 	double HCost(const PancakePuzzleState<N> &state1, const PancakePuzzleState<N> &state2) const;
 	double DefaultH(const PancakePuzzleState<N> &state1) const;
 	double DefaultH(const PancakePuzzleState<N> &state1, const std::vector<int> &goal_locs) const;
+	double DefaultH(const PancakePuzzleState<N> &state1, const int* goal_locs) const;
 	double HCost(const PancakePuzzleState<N> &state1) const;
 
 	double GCost(const PancakePuzzleState<N> &, const PancakePuzzleState<N> &) const {return 1.0;}
@@ -364,15 +365,28 @@ double PancakePuzzle<N>::HCost(const PancakePuzzleState<N> &state, const Pancake
 	//		return PDB_Lookup( t );
 	//	}
 	
+	//if (use_memory_free)
+	//{
+	//	//assert(!"This code allocates a vector; re-write to be more efficient");
+	//	std::vector<int> goal_locs(N);
+	//	for (unsigned i = 0; i < N; i++)
+	//	{
+	//		goal_locs[goal_state.puzzle[i]] = i;
+	//	}
+	//	return DefaultH(state, goal_locs);
+	//}
+
 	if (use_memory_free)
 	{
 		//assert(!"This code allocates a vector; re-write to be more efficient");
-		std::vector<int> goal_locs(N);
+		int* goal_locs  = new int[N];
 		for (unsigned i = 0; i < N; i++)
 		{
 			goal_locs[goal_state.puzzle[i]] = i;
 		}
-		return DefaultH(state, goal_locs);
+		double result = DefaultH(state, goal_locs);
+		delete goal_locs;
+		return result;
 	}
 	
 	if (state == goal_state)
@@ -406,6 +420,29 @@ double PancakePuzzle<N>::DefaultH(const PancakePuzzleState<N> &state, const std:
 	if ((unsigned) goal_locs[state.puzzle[i]]!= N -1)
 		h_count++;
 	
+	return h_count;
+}
+
+template <int N>
+double PancakePuzzle<N>::DefaultH(const PancakePuzzleState<N> &state, const int *goal_locs) const
+{
+	if (state.size() != N)
+	{
+		fprintf(stderr, "ERROR: HCost called with state with wrong size.\n");
+		exit(1);
+	}
+
+	double h_count = 0.0;
+	unsigned i = 0;
+	for (; i < N - 1; i++)
+	{
+		int diff = goal_locs[state.puzzle[i]] - goal_locs[state.puzzle[i + 1]];
+		if (diff > 1 || diff < -1)
+			h_count++;
+	}
+	if ((unsigned)goal_locs[state.puzzle[i]] != N - 1)
+		h_count++;
+
 	return h_count;
 }
 
