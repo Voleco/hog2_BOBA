@@ -82,7 +82,7 @@ namespace PANCAKETEST {
 	void GetInstance(instanceType type, PancakePuzzleState<N> &s);
 	
 	template<int N>
-	void pancakeTest(instanceType type);
+	void pancakeTest(instanceType type, int alg);
 }
 
 
@@ -146,7 +146,11 @@ int main(int argc, char** argv)
 			type = s5;
 		else if (strcmp(argv[2], "l9") == 0)
 			type = l9;
-		pancakeTest<LENGTH>(type);
+
+		int alg = 1;
+		if (argc > 3)
+			alg = std::atoi(argv[3]);
+		pancakeTest<LENGTH>(type,alg);
 	}
 
 	else
@@ -155,7 +159,7 @@ int main(int argc, char** argv)
 			<<"1: "<< argv[0] << " -gridMapTest <filename> [weight] [teststart] [testend]\n"
 			<<"2: "<< argv[0] << " -gridMapGUI\n"
 			<<"3: " << argv[0] << " -tohTest [mode] [first] [last]\n"
-			<< "4: " << argv[0] << " -pancakeTest <instanceType> \n";
+			<< "4: " << argv[0] << " -pancakeTest <instanceType> [alg]\n";
 	}
 
 
@@ -527,7 +531,7 @@ void PANCAKETEST::GetInstance(instanceType type, PancakePuzzleState<N> &s)
 }
 
 template <int N>
-void PANCAKETEST::pancakeTest(instanceType type)
+void PANCAKETEST::pancakeTest(instanceType type, int alg)
 {
 	PancakePuzzle<N> pck;
 	PancakePuzzleState<N> start;
@@ -535,6 +539,7 @@ void PANCAKETEST::pancakeTest(instanceType type)
 	goal.Reset();
 	GetInstance(type, start);
 
+	TemplateAStar<PancakePuzzleState<N>, PancakePuzzleAction, PancakePuzzle<N>> astar;
 	BOBA<PancakePuzzleState<N>, PancakePuzzleAction, PancakePuzzle<N>> boba;
 
 	std::vector<PancakePuzzleState<N>> thePath;
@@ -557,15 +562,30 @@ void PANCAKETEST::pancakeTest(instanceType type)
 	std::cout << " goal: " << goal << "\n";
 
 	Timer timer;
+	if (alg == 0)
+	{
+		printf("-=-=-A*-=-=-\n");
+		astar.SetHeuristic(&pck);
+		timer.StartTimer();
+		astar.GetPath(&pck, start, goal, thePath);
+		timer.EndTimer();
+		printf("%llu nodes expanded\n", astar.GetNodesExpanded());
+		printf("Solution path length %1.0f\n", pck.GetPathLength(thePath));
+		printf("%1.2f elapsed\n", timer.GetElapsedTime());
+	}
+	else if (alg == 1)
+	{
+		printf("-=-=-BOBA-=-=-\n");
+		timer.StartTimer();
 
-	printf("-=-=-BOBA-=-=-\n");
-	timer.StartTimer();
+		boba.InitializeSearch(&pck, start, goal, &pck, &pck, thePath);
+		boba.GetPath(&pck, start, goal, &pck, &pck, thePath);
 
-	boba.InitializeSearch(&pck, start, goal, &pck, &pck, thePath);
-	boba.GetPath(&pck, start, goal, &pck, &pck, thePath);
+		timer.EndTimer();
+		printf("%llu nodes expanded\n", boba.GetNodesExpanded());
+		printf("Solution path length %1.0f\n", pck.GetPathLength(thePath));
+		printf("%1.2f elapsed\n", timer.GetElapsedTime());
+	}
 
-	timer.EndTimer();
-	printf("%llu nodes expanded\n", boba.GetNodesExpanded());
-	printf("Solution path length %1.0f\n", pck.GetPathLength(thePath));
-	printf("%1.2f elapsed\n", timer.GetElapsedTime());
+
 }
