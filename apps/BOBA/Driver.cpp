@@ -570,6 +570,7 @@ void PANCAKETEST::pancakeTest(instanceType type, int alg)
 		astar.GetPath(&pck, start, goal, thePath);
 		timer.EndTimer();
 		printf("%llu nodes expanded\n", astar.GetNodesExpanded());
+		
 		printf("Solution path length %1.0f\n", pck.GetPathLength(thePath));
 		printf("%1.2f elapsed\n", timer.GetElapsedTime());
 	}
@@ -583,6 +584,7 @@ void PANCAKETEST::pancakeTest(instanceType type, int alg)
 
 		timer.EndTimer();
 		printf("%llu nodes expanded\n", boba.GetNodesExpanded());
+		printf("%llu neccesary nodes expanded\n", boba.GetNecessaryExpansions());
 		printf("Solution path length %1.0f\n", pck.GetPathLength(thePath));
 		printf("%1.2f elapsed\n", timer.GetElapsedTime());
 	}
