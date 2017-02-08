@@ -365,29 +365,29 @@ double PancakePuzzle<N>::HCost(const PancakePuzzleState<N> &state, const Pancake
 	//		return PDB_Lookup( t );
 	//	}
 	
-	//if (use_memory_free)
-	//{
-	//	//assert(!"This code allocates a vector; re-write to be more efficient");
-	//	std::vector<int> goal_locs(N);
-	//	for (unsigned i = 0; i < N; i++)
-	//	{
-	//		goal_locs[goal_state.puzzle[i]] = i;
-	//	}
-	//	return DefaultH(state, goal_locs);
-	//}
-
 	if (use_memory_free)
 	{
 		//assert(!"This code allocates a vector; re-write to be more efficient");
-		int* goal_locs  = new int[N];
+		static std::vector<int> goal_locs(N);
 		for (unsigned i = 0; i < N; i++)
 		{
 			goal_locs[goal_state.puzzle[i]] = i;
 		}
-		double result = DefaultH(state, goal_locs);
-		delete goal_locs;
-		return result;
+		return DefaultH(state, goal_locs);
 	}
+
+	//if (use_memory_free)
+	//{
+	//	assert(!"This code allocates a vector; re-write to be more efficient");
+	//	int* goal_locs  = new int[N];
+	//	for (unsigned i = 0; i < N; i++)
+	//	{
+	//		goal_locs[goal_state.puzzle[i]] = i;
+	//	}
+	//	double result = DefaultH(state, goal_locs);
+	//	delete goal_locs;
+	//	return result;
+	//}
 	
 	if (state == goal_state)
 		return 0.0;

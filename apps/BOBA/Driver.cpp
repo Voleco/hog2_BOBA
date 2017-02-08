@@ -72,7 +72,7 @@ namespace TOHTEST {
 }
 
 namespace PANCAKETEST {
-	const int LENGTH = 20;
+	const int LENGTH = 25;
 	enum instanceType
 	{
 		s5,
@@ -85,6 +85,9 @@ namespace PANCAKETEST {
 	void pancakeTest(instanceType type, int alg);
 }
 
+namespace RUBIKSTEST {
+
+}
 
 int main(int argc, char** argv)
 {

@@ -14,7 +14,7 @@
 #include "Timer.h"
 #include <unordered_map>
 
-template <class state, int epsilon = 0>
+template <class state, int epsilon = 1>
 struct MMCompare {
 	bool operator()(const AStarOpenClosedData<state> &i1, const AStarOpenClosedData<state> &i2) const
 	{
@@ -227,8 +227,8 @@ bool MM<state, action, environment, priorityQueue>::DoSingleSearchStep(std::vect
 	const AStarOpenClosedData<state> &nextForward = forwardQueue.Lookat(forward);
 	const AStarOpenClosedData<state> &nextBackward = backwardQueue.Lookat(backward);
 
-	double p1 = std::max(nextForward.g+nextForward.h, nextForward.g*2);
-	double p2 = std::max(nextBackward.g+nextBackward.h, nextBackward.g*2);
+	double p1 = std::max(nextForward.g+nextForward.h, nextForward.g*2+epsilon);
+	double p2 = std::max(nextBackward.g+nextBackward.h, nextBackward.g*2+epsilon);
 	if (p1 > oldp1)
 	{
 //		printf("Forward priority to %1.2f [%llu expanded - %1.2fs]\n", p1, GetNodesExpanded(), t.EndTimer());
