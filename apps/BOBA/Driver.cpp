@@ -107,7 +107,6 @@ namespace RUBIKSTEST {
 	};
 	const char *hprefix;
 
-	RubiksCube cube;
 	Heuristic<RubiksState> forward;
 	Heuristic<RubiksState> reverse;
 
@@ -904,17 +903,17 @@ void RUBIKSTEST::solver(RubiksState &start, RubiksState &goal,  AlgType alg)
 {
 
 	//BuildHeuristics(goal, start, reverse);
-	
+	RubiksCube cube;
 
 	if (alg == 5)//IDA*
 	{
-
+		
 		printf("---IDA*---\n");
 		std::vector<RubiksAction> path;
 		Timer t;
 		t.StartTimer();
 		cube.SetPruneSuccessors(true);
-		ParallelIDAStar<RubiksCube, RubiksState, RubiksAction> ida;
+		IDAStar<RubiksState, RubiksAction> ida;
 		ida.SetHeuristic(&forward);
 		ida.GetPath(&cube, start, goal, path);
 		t.EndTimer();
@@ -967,11 +966,9 @@ void RUBIKSTEST::solver(RubiksState &start, RubiksState &goal,  AlgType alg)
 void RUBIKSTEST::rubiksTest(heuristicType h, AlgType alg, const char *heuristicloc, int count)
 {
 	std::cout << "heuristic type:" <<h <<"\n";
-
 	hprefix = heuristicloc;
 
-
-
+	RubiksCube cube;
 	RubiksState s, g;
 	s.Reset();
 	g.Reset();
@@ -982,6 +979,7 @@ void RUBIKSTEST::rubiksTest(heuristicType h, AlgType alg, const char *heuristicl
 	for (int i = 0; i < count; i++)
 	{
 		s.Reset();
+		g.Reset();
 		//apply 16 random moves
 		for (int x = 0; x < 16; x++)
 		{
