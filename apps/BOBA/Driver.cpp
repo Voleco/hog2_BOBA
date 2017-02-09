@@ -711,11 +711,41 @@ void RUBIKSTEST::BuildHeuristics(RubiksState start, RubiksState goal, Heuristic<
 		RubikPDB *pdb3 = new RubikPDB(&cube, goal, edges3, blank);
 		RubikPDB *pdb4 = new RubikPDB(&cube, goal, blank, corners1);
 		RubikPDB *pdb5 = new RubikPDB(&cube, goal, blank, corners2);
-		pdb1->BuildPDB(goal, std::thread::hardware_concurrency());
-		pdb2->BuildPDB(goal, std::thread::hardware_concurrency());
-		pdb3->BuildPDB(goal, std::thread::hardware_concurrency());
-		pdb4->BuildPDB(goal, std::thread::hardware_concurrency());
-		pdb5->BuildPDB(goal, std::thread::hardware_concurrency());
+		if (!pdb1->Load(hprefix))
+		{
+			pdb1->BuildPDB(goal, std::thread::hardware_concurrency());
+			pdb1->Save(hprefix);
+		}
+		else 
+			printf("Loaded previous heuristic\n");
+		if (!pdb2->Load(hprefix))
+		{
+			pdb2->BuildPDB(goal, std::thread::hardware_concurrency());
+			pdb2->Save(hprefix);
+		}
+		else 
+			printf("Loaded previous heuristic\n");
+		if (!pdb3->Load(hprefix))
+		{
+			pdb3->BuildPDB(goal, std::thread::hardware_concurrency());
+			pdb3->Save(hprefix);
+		}
+		else 
+			printf("Loaded previous heuristic\n");
+		if (!pdb4->Load(hprefix))
+		{
+			pdb4->BuildPDB(goal, std::thread::hardware_concurrency());
+			pdb4->Save(hprefix);
+		}
+		else 
+			printf("Loaded previous heuristic\n");
+		if (!pdb5->Load(hprefix))
+		{
+			pdb5->BuildPDB(goal, std::thread::hardware_concurrency());
+			pdb5->Save(hprefix);
+		}
+		else 
+			printf("Loaded previous heuristic\n");
 		result.lookups.push_back({ kMaxNode, 1, 5 });
 		result.lookups.push_back({ kLeafNode, 0, 0 });
 		result.lookups.push_back({ kLeafNode, 1, 0 });
