@@ -937,6 +937,8 @@ void RUBIKSTEST::solver(RubiksState &start, RubiksState &goal,  AlgType alg)
 
 void RUBIKSTEST::rubiksTest(heuristicType h, AlgType alg, const char *heuristicloc, int count)
 {
+	std::cout << "heuristic type:" <<h <<"\n";
+
 	hprefix = heuristicloc;
 
 
@@ -957,6 +959,10 @@ void RUBIKSTEST::rubiksTest(heuristicType h, AlgType alg, const char *heuristicl
 			cube.GetActions(s, actions);
 			cube.ApplyAction(s, actions[random() % actions.size()]);
 		}
+
+		std::cout << "instance " << i << " :\n";
+		std::cout << "start " << s << "\n";
+		std::cout << "goal " << g << "\n";
 
 		BuildHeuristics(s, g, forward, h);
 		
