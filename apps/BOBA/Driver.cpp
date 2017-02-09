@@ -973,6 +973,8 @@ void RUBIKSTEST::rubiksTest(heuristicType h, AlgType alg, const char *heuristicl
 	s.Reset();
 	g.Reset();
 
+	BuildHeuristics(s, g, forward, h);
+
 	std::vector<RubiksAction> actions;
 
 	srandom(20170208);
@@ -990,9 +992,7 @@ void RUBIKSTEST::rubiksTest(heuristicType h, AlgType alg, const char *heuristicl
 		std::cout << "instance " << i << " :\n";
 		std::cout << "start " << s << "\n";
 		std::cout << "goal " << g << "\n";
-
-		BuildHeuristics(s, g, forward, h);
-		
+	
 		solver(s, g, alg);
 	}
 }
