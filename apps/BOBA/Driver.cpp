@@ -700,7 +700,6 @@ void RUBIKSTEST::BuildHeuristics(RubiksState start, RubiksState goal, Heuristic<
 	}
 	case kSmall:
 	{
-		assert(!"PDB not being saved!");
 		std::vector<int> edges1 = { 0, 1, 2, 4, 6 };
 		std::vector<int> edges2 = { 3, 5 };
 		std::vector<int> edges3 = { 7, 8, 9, 10, 11 };
