@@ -17,7 +17,7 @@
 
 #include "IDAStar.h"
 #include "ParallelIDAStar.h"
-
+#include "RubiksCube.h"
 #include "TOH.h"
 #include "PancakePuzzle.h"
 #include "ScenarioLoader.h"
@@ -32,6 +32,15 @@
 
 using std::cout;
 
+enum AlgType
+{
+	kAStar = 0,
+	kBOBA = 1,
+	kBOBA0 =2,
+	kMM = 3,
+	kMM0 = 4,
+	kIDAStar = 5
+};
 
 namespace GRIDMAPTEST {
 	Map *map = 0;
@@ -64,8 +73,8 @@ namespace GRIDMAPTEST {
 
 namespace TOHTEST {
 	template <int N>
-	void TestTOH(Heuristic<TOHState<N>> *f, int mode, int first, int last);
-	void TOHTest(int mode, int first = 0, int last = 50);
+	void TestTOH(Heuristic<TOHState<N>> *f, AlgType alg, int first, int last);
+	void TOHTest(AlgType alg, int first = 0, int last = 50);
 
 	const int M = 3;
 	const int numDisks = 14; // [disks - 2] (4^14 - 256 million)
@@ -82,11 +91,30 @@ namespace PANCAKETEST {
 	void GetInstance(instanceType type, PancakePuzzleState<N> &s);
 	
 	template<int N>
-	void pancakeTest(instanceType type, int alg);
+	void pancakeTest(instanceType type, AlgType alg);
 }
 
 namespace RUBIKSTEST {
+	//total number of test cases;
+	enum heuristicType {
+		kNone,
+		k444,
+		kSmall,
+		k888,
+		k1997,
+		k839,
+		k8210
+	};
+	const char *hprefix;
 
+	RubiksCube cube;
+	Heuristic<RubiksState> forward;
+	Heuristic<RubiksState> reverse;
+
+	void BuildHeuristics(RubiksState start, RubiksState goal, Heuristic<RubiksState> &result, heuristicType h);
+
+	void solver(RubiksState &start, RubiksState &goal, AlgType alg);
+	void rubiksTest(heuristicType h, AlgType alg, const char *heuristicloc, int count=25);
 }
 
 int main(int argc, char** argv)
@@ -125,18 +153,18 @@ int main(int argc, char** argv)
 	{
 
 		using namespace TOHTEST;
-		int mode = 1;
+		int alg = 1;
 		int first = 0;
 		int last = 50;
 		
 		if (argc > 2)
-			mode = std::atoi(argv[2]);
+			alg = std::atoi(argv[2]);
 		
 		if (argc > 3)
 			first = std::atoi(argv[3]);
 		if (argc > 4)
 			last = std::atoi(argv[4]);
-		TOHTest(mode,first,last);
+		TOHTest((AlgType)alg,first,last);
 	}
 
 	else if (argc > 2 && strcmp(argv[1], "-pancakeTest") == 0)
@@ -153,16 +181,44 @@ int main(int argc, char** argv)
 		int alg = 1;
 		if (argc > 3)
 			alg = std::atoi(argv[3]);
-		pancakeTest<LENGTH>(type,alg);
+		pancakeTest<LENGTH>(type,(AlgType)alg);
+	}
+	else if (argc > 2 && strcmp(argv[1], "-rubiksTest") == 0)
+	{
+
+		using namespace RUBIKSTEST;
+
+		const char* hpre = argv[2];
+
+		int alg = 1;
+		if (argc > 3)
+			alg = std::atoi(argv[3]);
+
+		heuristicType type = k839;
+		if (argc > 4)
+		{
+			if (strcmp(argv[4], "kNone") == 0) type = heuristicType::kNone;
+			if (strcmp(argv[4], "k444") == 0) type = k444;
+			if (strcmp(argv[4], "kSmall") == 0) type = kSmall;
+			if (strcmp(argv[4], "k888") == 0) type = k888;
+			if (strcmp(argv[4], "k1997") == 0) type = k1997;
+			if (strcmp(argv[4], "k839") == 0) type = k839;
+			if (strcmp(argv[4], "k8210") == 0) type = k8210;
+		}
+		int count = 25;
+		if (argc > 5)
+			count = std::atoi(argv[5]);
+		rubiksTest(type,(AlgType)alg,hpre,count);
 	}
 
 	else
 	{
-		std::cout << "Usage: \n" 
-			<<"1: "<< argv[0] << " -gridMapTest <filename> [weight] [teststart] [testend]\n"
-			<<"2: "<< argv[0] << " -gridMapGUI\n"
-			<<"3: " << argv[0] << " -tohTest [mode] [first] [last]\n"
-			<< "4: " << argv[0] << " -pancakeTest <instanceType> [alg]\n";
+		std::cout << "Usage: \n"
+			<< "1: " << argv[0] << " -gridMapTest <filename> [weight] [teststart] [testend]\n"
+			<< "2: " << argv[0] << " -gridMapGUI\n"
+			<< "3: " << argv[0] << " -tohTest [alg] [first] [last]\n"
+			<< "4: " << argv[0] << " -pancakeTest <instanceType> [alg]\n"
+			<< "5: " << argv[0] << " -rubiksTest <hprefix> [alg] [heuristicType] [count]\n";
 	}
 
 
@@ -328,7 +384,7 @@ void GRIDMAPTEST::run(std::string fileName, double weight, int teststart, int te
 }
 
 template <int N>
-void TOHTEST::TestTOH(Heuristic<TOHState<N>> *f, int mode, int first, int last)
+void TOHTEST::TestTOH(Heuristic<TOHState<N>> *f, AlgType alg, int first, int last)
 {
 	//const int M = 2;
 
@@ -358,7 +414,7 @@ void TOHTEST::TestTOH(Heuristic<TOHState<N>> *f, int mode, int first, int last)
 		}
 		Timer timer;
 
-		if (mode == 0)
+		if (alg == 0)
 		{
 			printf("-=-=-A*-=-=-\n");
 			astar.SetUseBPMX(1);
@@ -371,7 +427,7 @@ void TOHTEST::TestTOH(Heuristic<TOHState<N>> *f, int mode, int first, int last)
 			printf("%1.2f elapsed\n", timer.GetElapsedTime());
 		}
 
-		else if (mode == 1)
+		else if (alg == 1)
 		{
 			//we need to build the backward hueristic for BOBA
 			TOH<N - M> absToh2;
@@ -404,7 +460,7 @@ void TOHTEST::TestTOH(Heuristic<TOHState<N>> *f, int mode, int first, int last)
 
 
 		}
-		else if (mode == 2)
+		else if (alg == 2)
 		{	
 			ZeroHeuristic<TOHState<N>> zero;
 			printf("-=-=-BOBA no heur-=-=-\n");
@@ -418,7 +474,7 @@ void TOHTEST::TestTOH(Heuristic<TOHState<N>> *f, int mode, int first, int last)
 			printf("%1.2f elapsed\n", timer.GetElapsedTime());
 		}
 
-		else if (mode == 3)
+		else if (alg == 3)
 		{
 			TOH<N - M> absToh2;
 			TOHState<N - M> absTohState2;
@@ -449,7 +505,7 @@ void TOHTEST::TestTOH(Heuristic<TOHState<N>> *f, int mode, int first, int last)
 
 		}
 
-		else if (mode == 4)
+		else if (alg == 4)
 		{
 			ZeroHeuristic<TOHState<N>> zero;
 			printf("-=-=-MM0-=-=-\n");
@@ -467,7 +523,7 @@ void TOHTEST::TestTOH(Heuristic<TOHState<N>> *f, int mode, int first, int last)
 
 
 
-void TOHTEST::TOHTest(int mode, int first, int last)
+void TOHTEST::TOHTest(AlgType alg, int first, int last)
 {
 	printf("--== TOH Test ==--\n");
 	
@@ -495,7 +551,7 @@ void TOHTEST::TOHTest(int mode, int first, int last)
 	h.heuristics.resize(0);
 	h.heuristics.push_back(&pdb1);
 
-	TestTOH<numDisks>(&h, mode, first, last);
+	TestTOH<numDisks>(&h, alg, first, last);
 
 	//printf("Dynamic distribution\n");
 	//for (int x = 0; x < 255; x++)
@@ -534,7 +590,7 @@ void PANCAKETEST::GetInstance(instanceType type, PancakePuzzleState<N> &s)
 }
 
 template <int N>
-void PANCAKETEST::pancakeTest(instanceType type, int alg)
+void PANCAKETEST::pancakeTest(instanceType type, AlgType alg)
 {
 	PancakePuzzle<N> pck;
 	PancakePuzzleState<N> start;
@@ -593,4 +649,317 @@ void PANCAKETEST::pancakeTest(instanceType type, int alg)
 	}
 
 
+}
+
+
+void RUBIKSTEST::BuildHeuristics(RubiksState start, RubiksState goal, Heuristic<RubiksState> &result, heuristicType h)
+{
+	RubiksCube cube;
+	std::vector<int> blank;
+
+	switch (h)
+	{
+	case kNone:
+	{
+		ZeroHeuristic<RubiksState> *zero = new ZeroHeuristic<RubiksState>();
+		result.lookups.push_back({ kLeafNode, 0, 0 });
+		result.heuristics.push_back(zero);
+		break;
+	}
+	case k444:
+	{
+		std::vector<int> edges1 = { 1, 3, 8, 9 }; // first 4
+		std::vector<int> edges2 = { 0, 2, 4, 5 }; // first 4
+		std::vector<int> corners = { 0, 1, 2, 3 }; // first 4
+		RubikPDB *pdb1 = new RubikPDB(&cube, goal, edges1, blank);
+		RubikPDB *pdb2 = new RubikPDB(&cube, goal, edges2, blank);
+		RubikPDB *pdb3 = new RubikPDB(&cube, goal, blank, corners);
+		if (!pdb1->Load(hprefix))
+		{
+			pdb1->BuildPDB(goal, std::thread::hardware_concurrency());
+			pdb1->Save(hprefix);
+		}
+		if (!pdb2->Load(hprefix))
+		{
+			pdb2->BuildPDB(goal, std::thread::hardware_concurrency());
+			pdb2->Save(hprefix);
+		}
+		if (!pdb3->Load(hprefix))
+		{
+			pdb3->BuildPDB(goal, std::thread::hardware_concurrency());
+			pdb3->Save(hprefix);
+		}
+		result.lookups.push_back({ kMaxNode, 1, 3 });
+		result.lookups.push_back({ kLeafNode, 0, 0 });
+		result.lookups.push_back({ kLeafNode, 1, 0 });
+		result.lookups.push_back({ kLeafNode, 2, 0 });
+		result.heuristics.push_back(pdb1);
+		result.heuristics.push_back(pdb2);
+		result.heuristics.push_back(pdb3);
+		break;
+	}
+	case kSmall:
+	{
+		assert(!"PDB not being saved!");
+		std::vector<int> edges1 = { 0, 1, 2, 4, 6 };
+		std::vector<int> edges2 = { 3, 5 };
+		std::vector<int> edges3 = { 7, 8, 9, 10, 11 };
+		std::vector<int> corners1 = { 0, 1, 2, 3, 4, 5 };
+		std::vector<int> corners2 = { 2, 3, 4, 5, 6, 7 };
+		RubikPDB *pdb1 = new RubikPDB(&cube, goal, edges1, blank);
+		RubikPDB *pdb2 = new RubikPDB(&cube, goal, edges2, blank);
+		RubikPDB *pdb3 = new RubikPDB(&cube, goal, edges3, blank);
+		RubikPDB *pdb4 = new RubikPDB(&cube, goal, blank, corners1);
+		RubikPDB *pdb5 = new RubikPDB(&cube, goal, blank, corners2);
+		pdb1->BuildPDB(goal, std::thread::hardware_concurrency());
+		pdb2->BuildPDB(goal, std::thread::hardware_concurrency());
+		pdb3->BuildPDB(goal, std::thread::hardware_concurrency());
+		pdb4->BuildPDB(goal, std::thread::hardware_concurrency());
+		pdb5->BuildPDB(goal, std::thread::hardware_concurrency());
+		result.lookups.push_back({ kMaxNode, 1, 5 });
+		result.lookups.push_back({ kLeafNode, 0, 0 });
+		result.lookups.push_back({ kLeafNode, 1, 0 });
+		result.lookups.push_back({ kLeafNode, 2, 0 });
+		result.lookups.push_back({ kLeafNode, 3, 0 });
+		result.lookups.push_back({ kLeafNode, 4, 0 });
+		result.heuristics.push_back(pdb1);
+		result.heuristics.push_back(pdb2);
+		result.heuristics.push_back(pdb3);
+		result.heuristics.push_back(pdb4);
+		result.heuristics.push_back(pdb5);
+		break;
+	}
+	case k1997:
+	{
+		std::vector<int> edges1 = { 1, 3, 8, 9, 10, 11 };
+		std::vector<int> edges2 = { 0, 2, 4, 5, 6, 7 };
+		std::vector<int> corners = { 0, 1, 2, 3, 4, 5, 6, 7 };
+		RubikPDB *pdb1 = new RubikPDB(&cube, goal, edges1, blank);
+		RubikPDB *pdb2 = new RubikPDB(&cube, goal, edges2, blank);
+		RubikPDB *pdb3 = new RubikPDB(&cube, goal, blank, corners);
+
+		if (!pdb1->Load(hprefix))
+		{
+			pdb1->BuildPDB(goal, std::thread::hardware_concurrency());
+			pdb1->Save(hprefix);
+		}
+		else {
+			printf("Loaded previous heuristic\n");
+		}
+		if (!pdb2->Load(hprefix))
+		{
+			pdb2->BuildPDB(goal, std::thread::hardware_concurrency());
+			pdb2->Save(hprefix);
+		}
+		else {
+			printf("Loaded previous heuristic\n");
+		}
+		if (!pdb3->Load(hprefix))
+		{
+			pdb3->BuildPDB(goal, std::thread::hardware_concurrency());
+			pdb3->Save(hprefix);
+		}
+		else {
+			printf("Loaded previous heuristic\n");
+		}
+		result.lookups.push_back({ kMaxNode, 1, 3 });
+		result.lookups.push_back({ kLeafNode, 0, 0 });
+		result.lookups.push_back({ kLeafNode, 1, 0 });
+		result.lookups.push_back({ kLeafNode, 2, 0 });
+		result.heuristics.push_back(pdb1);
+		result.heuristics.push_back(pdb2);
+		result.heuristics.push_back(pdb3);
+		break;
+	}
+	case k888:
+	{
+		std::vector<int> edges1 = { 0, 1, 2, 3, 4, 5, 6, 7 };
+		std::vector<int> edges2 = { 1, 3, 5, 7, 8, 9, 10, 11 };
+		std::vector<int> corners = { 0, 1, 2, 3, 4, 5, 6, 7 }; // first 4
+		RubikPDB *pdb1 = new RubikPDB(&cube, goal, edges1, blank);
+		RubikPDB *pdb2 = new RubikPDB(&cube, goal, edges2, blank);
+		RubikPDB *pdb3 = new RubikPDB(&cube, goal, blank, corners);
+		if (!pdb1->Load(hprefix))
+		{
+			pdb1->BuildPDB(goal, std::thread::hardware_concurrency());
+			pdb1->Save(hprefix);
+		}
+		if (!pdb2->Load(hprefix))
+		{
+			pdb2->BuildPDB(goal, std::thread::hardware_concurrency());
+			pdb2->Save(hprefix);
+		}
+		if (!pdb3->Load(hprefix))
+		{
+			pdb3->BuildPDB(goal, std::thread::hardware_concurrency());
+			pdb3->Save(hprefix);
+		}
+		result.lookups.push_back({ kMaxNode, 1, 3 });
+		result.lookups.push_back({ kLeafNode, 0, 0 });
+		result.lookups.push_back({ kLeafNode, 1, 0 });
+		result.lookups.push_back({ kLeafNode, 2, 0 });
+		result.heuristics.push_back(pdb1);
+		result.heuristics.push_back(pdb2);
+		result.heuristics.push_back(pdb3);
+		break;
+	}
+	case k839:
+	{
+		std::vector<int> edges1 = { 0, 1, 2, 3, 4, 5, 6, 7, 8 };
+		std::vector<int> edges2 = { 9, 10, 11 };
+		std::vector<int> corners = { 0, 1, 2, 3, 4, 5, 6, 7 };
+		RubikPDB *pdb1 = new RubikPDB(&cube, goal, edges1, blank);
+		RubikPDB *pdb2 = new RubikPDB(&cube, goal, edges2, blank);
+		RubikPDB *pdb3 = new RubikPDB(&cube, goal, blank, corners);
+		if (!pdb1->Load(hprefix))
+		{
+			pdb1->BuildPDB(goal, std::thread::hardware_concurrency());
+			pdb1->Save(hprefix);
+		}
+		if (!pdb2->Load(hprefix))
+		{
+			pdb2->BuildPDB(goal, std::thread::hardware_concurrency());
+			pdb2->Save(hprefix);
+		}
+		if (!pdb3->Load(hprefix))
+		{
+			pdb3->BuildPDB(goal, std::thread::hardware_concurrency());
+			pdb3->Save(hprefix);
+		}
+		result.lookups.push_back({ kMaxNode, 1, 3 });
+		result.lookups.push_back({ kLeafNode, 0, 0 });
+		result.lookups.push_back({ kLeafNode, 1, 0 });
+		result.lookups.push_back({ kLeafNode, 2, 0 });
+		result.heuristics.push_back(pdb1);
+		result.heuristics.push_back(pdb2);
+		result.heuristics.push_back(pdb3);
+		break;
+	}
+	case k8210:
+	{
+		std::vector<int> edges1 = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 };
+		std::vector<int> edges2 = { 10, 11 };
+		std::vector<int> corners = { 0, 1, 2, 3, 4, 5, 6, 7 };
+		RubikPDB *pdb1 = new RubikPDB(&cube, goal, edges1, blank);
+		RubikPDB *pdb2 = new RubikPDB(&cube, goal, edges2, blank);
+		RubikPDB *pdb3 = new RubikPDB(&cube, goal, blank, corners);
+		if (!pdb1->Load(hprefix))
+		{
+			pdb1->BuildPDB(goal, std::thread::hardware_concurrency());
+			pdb1->Save(hprefix);
+		}
+		if (!pdb2->Load(hprefix))
+		{
+			pdb2->BuildPDB(goal, std::thread::hardware_concurrency());
+			pdb2->Save(hprefix);
+		}
+		if (!pdb3->Load(hprefix))
+		{
+			pdb3->BuildPDB(goal, std::thread::hardware_concurrency());
+			pdb3->Save(hprefix);
+		}
+		result.lookups.push_back({ kMaxNode, 1, 3 });
+		result.lookups.push_back({ kLeafNode, 0, 0 });
+		result.lookups.push_back({ kLeafNode, 1, 0 });
+		result.lookups.push_back({ kLeafNode, 2, 0 });
+		result.heuristics.push_back(pdb1);
+		result.heuristics.push_back(pdb2);
+		result.heuristics.push_back(pdb3);
+		break;
+	}
+	}
+}
+
+void RUBIKSTEST::solver(RubiksState &start, RubiksState &goal,  AlgType alg)
+//void CompareIDA(RubiksState &start, RubiksState &goal, const char *p1, const char *p2, const char *hloc)
+{
+
+	//BuildHeuristics(goal, start, reverse);
+	
+
+	if (alg == 5)//IDA*
+	{
+
+		printf("---IDA*---\n");
+		std::vector<RubiksAction> path;
+		Timer t;
+		t.StartTimer();
+		cube.SetPruneSuccessors(true);
+		ParallelIDAStar<RubiksCube, RubiksState, RubiksAction> ida;
+		ida.SetHeuristic(&forward);
+		ida.GetPath(&cube, start, goal, path);
+		t.EndTimer();
+		printf("%1.5fs elapsed\n", t.GetElapsedTime());
+		printf("%llu nodes expanded (%1.3f nodes/sec)\n", ida.GetNodesExpanded(),
+			ida.GetNodesExpanded() / t.GetElapsedTime());
+		printf("%llu nodes generated (%1.3f nodes/sec)\n", ida.GetNodesTouched(),
+			ida.GetNodesTouched() / t.GetElapsedTime());
+		printf("Solution cost: %lu\n", path.size());
+
+		std::cout << "Acts: ";
+		for (unsigned int x = 0; x < path.size(); x++)
+		{
+			std::cout << path[x] << " ";
+		}
+		std::cout << "\n";
+	}
+	
+
+	else if (alg == 1)//BOBA*
+	{
+		printf("---BOBA*---\n");
+		Timer t;
+
+		t.StartTimer();
+		reverse = forward;
+		for (int x = 0; x < reverse.heuristics.size(); x++)
+		{
+			reverse.heuristics[x] = new RubikArbitraryGoalPDB((RubikPDB*)reverse.heuristics[x]);
+		}
+		//BuildHeuristics(goal, start, reverse);
+		t.EndTimer();
+		printf("\n time to buildPDB: %1.2f elapsed\n", t.GetElapsedTime());
+
+		std::vector<RubiksState> thePath;
+
+		t.StartTimer();
+		BOBA<RubiksState, RubiksAction, RubiksCube> boba;
+		boba.InitializeSearch(&cube, start, goal, &forward, &reverse, thePath);
+		boba.GetPath(&cube, start, goal, &forward, &reverse, thePath);
+
+		t.EndTimer();
+		printf("%llu nodes expanded\n", boba.GetNodesExpanded());
+		printf("%llu neccesary nodes expanded\n", boba.GetNecessaryExpansions());
+		printf("Solution path length %1.0f\n", cube.GetPathLength(thePath));
+		printf("%1.2f elapsed\n", t.GetElapsedTime());
+	}
+}
+
+void RUBIKSTEST::rubiksTest(heuristicType h, AlgType alg, const char *heuristicloc, int count)
+{
+	hprefix = heuristicloc;
+
+
+
+	RubiksState s, g;
+	s.Reset();
+	g.Reset();
+
+	std::vector<RubiksAction> actions;
+
+	srandom(20170208);
+	for (int i = 0; i < count; i++)
+	{
+		s.Reset();
+		//apply 16 random moves
+		for (int x = 0; x < 16; x++)
+		{
+			cube.GetActions(s, actions);
+			cube.ApplyAction(s, actions[random() % actions.size()]);
+		}
+
+		BuildHeuristics(s, g, forward, h);
+		
+		solver(s, g, alg);
+	}
 }
